@@ -1,2 +1,144 @@
-fewfew
-Hello everyone
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Mentale Gezondheid Scan</title>
+
+    <style>
+        body{
+          background:#f3faf6;
+          font-family: Arial, sans-serif;
+          margin:0;
+        }
+
+        header{
+          background:#2f9e63;
+          color:white;
+          padding:15px 40px;
+        }
+
+        main{
+          max-width:700px;
+          background:white;
+          margin:50px auto;
+          padding:30px;
+          border-radius:15px;
+          box-shadow:0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        h1{
+          color:#2f9e63;
+          text-align:center;
+        }
+
+        .question{
+          margin:20px 0;
+        }
+
+        label{
+          display:block;
+          margin-bottom:6px;
+        }
+
+        select{
+          width:100%;
+          padding:8px;
+          border-radius:7px;
+          border:1px solid #ccc;
+        }
+
+        button{
+          width:100%;
+          background:#2f9e63;
+          color:white;
+          border:none;
+          padding:12px;
+          font-size:16px;
+          border-radius:7px;
+          cursor:pointer;
+        }
+
+        button:hover{
+          background:#24774c;
+        }
+
+        #result{
+          margin-top:20px;
+          font-size:18px;
+          text-align:center;
+          font-weight:bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h2>SDG 3 – Mentale Gezondheid Scan</h2>
+</header>
+
+<main>
+
+    <h1>Hoe gaat het met jou?</h1>
+
+    <div class="question">
+        <label>Hoe gestrest voel je je?</label>
+        <select id="q1">
+            <option value="1">Niet</option>
+            <option value="2">Beetje</option>
+            <option value="3">Best wel</option>
+            <option value="4">Heel erg</option>
+        </select>
+    </div>
+
+    <div class="question">
+        <label>Hoe goed slaap je de laatste tijd?</label>
+        <select id="q2">
+            <option value="1">Heel goed</option>
+            <option value="2">Goed</option>
+            <option value="3">Matig</option>
+            <option value="4">Slecht</option>
+        </select>
+    </div>
+
+    <div class="question">
+        <label>Hoe vaak voel je je somber?</label>
+        <select id="q3">
+            <option value="1">Zelden</option>
+            <option value="2">Soms</option>
+            <option value="3">Vaak</option>
+            <option value="4">Bijna altijd</option>
+        </select>
+    </div>
+
+    <button onclick="calc()">Bekijk resultaat</button>
+
+    <div id="result"></div>
+
+</main>
+
+<script>
+    function calc(){
+      let score =
+        Number(q1.value) +
+        Number(q2.value) +
+        Number(q3.value);
+
+      let result = "";
+
+      if(score <= 5){
+        result = "✅ Je mentale balans ziet er goed uit!";
+      }
+      else if(score <= 8){
+        result = "⚠️ Je ervaart licht verhoogde stress.";
+      }
+      else{
+        result = "🚨 Je ervaart veel stress. Praat met iemand die je vertrouwt.";
+      }
+
+      document.getElementById("result").innerHTML = result;
+    }
+</script>
+
+</body>
+</html>
