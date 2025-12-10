@@ -1,143 +1,403 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Mentale Gezondheid Scan</title>
+    <title>HealthBuddy</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700&display=swap" rel="stylesheet">
 
     <style>
+
+        *{
+            box-sizing:border-box;
+            margin:0;
+            padding:0;
+        }
+
         body{
-          background:#f3faf6;
-          font-family: Arial, sans-serif;
-          margin:0;
+            background:#fdf8e4;
+            height:100vh;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            font-family:'Baloo 2', sans-serif;
         }
 
-        header{
-          background:#2f9e63;
-          color:white;
-          padding:15px 40px;
+        .app{
+            width:100%;
+            max-width:420px;
         }
 
-        main{
-          max-width:700px;
-          background:white;
-          margin:50px auto;
-          padding:30px;
-          border-radius:15px;
-          box-shadow:0 5px 15px rgba(0,0,0,0.1);
+        /* BASIS PAGINA'S */
+        .page{
+            display:none;
+            padding:30px 20px 40px;
+        }
+        .page.active{
+            display:block;
         }
 
-        h1{
-          color:#2f9e63;
-          text-align:center;
+        /* LOGO */
+        .logo-wrapper{
+            display:flex;
+            justify-content:center;
+        }
+        .logo-circle{
+            width:100px;
+            height:100px;
+            background:#228f8c;
+            border-radius:50%;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        }
+        .logo-inner{
+            width:80px;
+            height:80px;
+            background:#8ff1c3;
+            border-radius:50%;
+            position:relative;
+        }
+        .logo-inner::before{
+            content:"";
+            width:36px;
+            height:32px;
+            background:#228f8c;
+            border-radius:50%;
+            position:absolute;
+            top:20px;
+            left:22px;
+        }
+        .brand-name{
+            margin:10px 0 24px;
+            text-align:center;
+            font-size:18px;
+            font-weight:700;
+            letter-spacing:2px;
         }
 
-        .question{
-          margin:20px 0;
+        /* ADMIN LINK */
+        .admin-label{
+            position:absolute;
+            top:10px;
+            right:16px;
+            font-size:12px;
+            color:#bcbcbc;
+            cursor:pointer;
         }
 
-        label{
-          display:block;
-          margin-bottom:6px;
+        /* BUTTONS */
+        .button{
+            width:100%;
+            padding:17px;
+            border:none;
+            border-radius:28px;
+            background:#64c26d;
+            font-size:20px;
+            font-weight:700;
+            cursor:pointer;
+            box-shadow:0 4px 0 #4a9a52;
+        }
+        .small{
+            width:70%;
+            margin:18px auto 0;
+            display:block;
+            background:#7ddfb3;
+            box-shadow:0 3px 0 #5aac8a;
+        }
+        .button:active{
+            transform:translateY(2px);
         }
 
-        select{
-          width:100%;
-          padding:8px;
-          border-radius:7px;
-          border:1px solid #ccc;
+        /* HOME */
+        .welcome{
+            background:#7ddfb3;
+            padding:22px;
+            border-radius:28px;
+            text-align:center;
+            margin-bottom:25px;
         }
 
-        button{
-          width:100%;
-          background:#2f9e63;
-          color:white;
-          border:none;
-          padding:12px;
-          font-size:16px;
-          border-radius:7px;
-          cursor:pointer;
+        /* FAQ (INKLAPBAAR) */
+        .faq-item{
+            display:flex;
+            gap:14px;
+            margin-bottom:16px;
+            cursor:pointer;
         }
 
-        button:hover{
-          background:#24774c;
+        .faq-bullet{
+            width:26px;
+            height:26px;
+            background:#013e52;
+            border-radius:50%;
+            flex-shrink:0;
         }
 
-        #result{
-          margin-top:20px;
-          font-size:18px;
-          text-align:center;
-          font-weight:bold;
+        .faq-text{
+            flex:1;
         }
+
+        .faq-question{
+            font-weight:700;
+        }
+
+        .faq-answer{
+            font-size:13px;
+            display:none;
+            margin-top:4px;
+        }
+
+        /* CAMERA */
+        .camera-box{
+            width:100%;
+            height:260px;
+            background:#d3d3d3;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            margin-bottom:30px;
+        }
+
+        /* FEEL */
+        .mood-grid{
+            margin-bottom:30px;
+        }
+        .mood-row{
+            display:flex;
+            justify-content:center;
+            gap:16px;
+        }
+        .mood{
+            width:150px;
+            padding:16px;
+            border-radius:28px;
+            border:none;
+            font-weight:700;
+        }
+        .good{background:#64c26d;}
+        .ok{background:#9be29c;}
+        .sad{background:#ffc864;}
+        .verysad{background:#ff7f7f;}
+
+        /* LOGIN */
+        .login-box{
+            background:#7ddfb3;
+            padding:26px;
+            border-radius:28px;
+        }
+        input{
+            width:100%;
+            padding:12px;
+            margin:8px 0;
+            border:none;
+        }
+        .error{
+            color:red;
+            font-size:12px;
+            text-align:center;
+        }
+
+        /* SAD TIPS */
+        .tips-header{
+            background:#ff7f7f;
+            border-radius:32px;
+            padding:22px;
+            margin-bottom:26px;
+            text-align:center;
+        }
+        .tip-button{
+            width:100%;
+            padding:14px;
+            border-radius:28px;
+            border:none;
+            background:#64c26d;
+            margin-bottom:12px;
+            font-weight:700;
+        }
+
     </style>
 </head>
-
 <body>
 
-<header>
-    <h2>SDG 3 – Mentale Gezondheid Scan</h2>
-</header>
+<div class="app">
 
-<main>
+    <!-- ================= HOME ================= -->
+    <div id="home" class="page active" style="position:relative">
 
-    <h1>Hoe gaat het met jou?</h1>
+        <div class="admin-label" onclick="showPage('login')">I'm an admin</div>
 
-    <div class="question">
-        <label>Hoe gestrest voel je je?</label>
-        <select id="q1">
-            <option value="1">Niet</option>
-            <option value="2">Beetje</option>
-            <option value="3">Best wel</option>
-            <option value="4">Heel erg</option>
-        </select>
+        <div class="logo-wrapper">
+            <div class="logo-circle"><div class="logo-inner"></div></div>
+        </div>
+
+        <div class="brand-name">HEALTHBUDDY</div>
+
+        <div class="welcome">
+            <h3>Welcome to HealthBuddy</h3>
+            <p>Scan a HealthBuddy pole to continue</p>
+        </div>
+
+        <button class="button" onclick="showPage('scan')">Scan Pole</button>
+
+        <br><br>
+
+        <!-- FAQ -->
+        <div class="faq-item" onclick="toggleFaq(this)">
+            <div class="faq-bullet"></div>
+            <div class="faq-text">
+                <div class="faq-question">What is HealthBuddy?</div>
+                <div class="faq-answer">
+                    HealthBuddy is a simple check-in system that allows people to share how they feel using the buttons on the pole.
+                </div>
+            </div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+            <div class="faq-bullet"></div>
+            <div class="faq-text">
+                <div class="faq-question">Where can I find a HealthBuddy pole?</div>
+                <div class="faq-answer">
+                    You can find poles in schools, offices, community centers and other public spaces.
+                </div>
+            </div>
+        </div>
+
+        <div class="faq-item" onclick="toggleFaq(this)">
+            <div class="faq-bullet"></div>
+            <div class="faq-text">
+                <div class="faq-question">Other Frequently Asked Questions</div>
+                <div class="faq-answer">
+                    Ask your organization or check the HealthBuddy website for more info.
+                </div>
+            </div>
+        </div>
+
     </div>
 
-    <div class="question">
-        <label>Hoe goed slaap je de laatste tijd?</label>
-        <select id="q2">
-            <option value="1">Heel goed</option>
-            <option value="2">Goed</option>
-            <option value="3">Matig</option>
-            <option value="4">Slecht</option>
-        </select>
+    <!-- ================= SCAN ================= -->
+    <div id="scan" class="page">
+
+        <div class="logo-wrapper">
+            <div class="logo-circle"><div class="logo-inner"></div></div>
+        </div>
+
+        <div class="brand-name">HEALTHBUDDY</div>
+
+        <div class="camera-box">Camera</div>
+
+        <button class="button" onclick="showPage('feel')">Scan Pole</button>
+        <button class="button small" onclick="showPage('home')">Back</button>
+
     </div>
 
-    <div class="question">
-        <label>Hoe vaak voel je je somber?</label>
-        <select id="q3">
-            <option value="1">Zelden</option>
-            <option value="2">Soms</option>
-            <option value="3">Vaak</option>
-            <option value="4">Bijna altijd</option>
-        </select>
+    <!-- ================= FEEL ================= -->
+    <div id="feel" class="page">
+
+        <div class="logo-wrapper">
+            <div class="logo-circle"><div class="logo-inner"></div></div>
+        </div>
+
+        <div class="brand-name">HEALTHBUDDY</div>
+
+        <div class="welcome">
+            <h3>How do you feel?</h3>
+            <p>Press one of the 4 buttons on the pole.</p>
+        </div>
+
+        <div class="mood-grid">
+            <div class="mood-row">
+                <button class="mood good">Great!</button>
+                <button class="mood ok">Could be better</button>
+            </div>
+            <div class="mood-row">
+                <button class="mood sad" onclick="showPage('sadTips')">Sad :(</button>
+                <button class="mood verysad" onclick="showPage('sadTips')">Very sad ;(</button>
+            </div>
+        </div>
+
+        <button class="button small" onclick="showPage('scan')">Back</button>
+
     </div>
 
-    <button onclick="calc()">Bekijk resultaat</button>
+    <!-- ================= SAD TIPS ================= -->
+    <div id="sadTips" class="page">
 
-    <div id="result"></div>
+        <div class="logo-wrapper">
+            <div class="logo-circle"><div class="logo-inner"></div></div>
+        </div>
 
-</main>
+        <div class="brand-name">HEALTHBUDDY</div>
+
+        <div class="tips-header">
+            <h3>It's sad to hear you feel this way</h3>
+            <p>Maybe try one of these tips</p>
+        </div>
+
+        <button class="tip-button">Call suicide watch (113)</button>
+        <button class="tip-button">Tell someone how you feel</button>
+        <button class="tip-button">Get some help</button>
+        <button class="tip-button">Make a coffee</button>
+
+        <button class="button small" onclick="showPage('feel')">Back</button>
+
+    </div>
+
+    <!-- ================= LOGIN ================= -->
+    <div id="login" class="page">
+
+        <div class="logo-wrapper">
+            <div class="logo-circle"><div class="logo-inner"></div></div>
+        </div>
+
+        <div class="brand-name">ADMIN LOGIN</div>
+
+        <div class="login-box">
+            <input id="user" placeholder="Username">
+            <input id="pass" type="password" placeholder="Password">
+
+            <button class="button" onclick="login()">Login</button>
+            <div id="error" class="error"></div>
+
+            <button class="button small" onclick="showPage('home')">Back</button>
+        </div>
+
+    </div>
+
+</div>
 
 <script>
-    function calc(){
-      let score =
-        Number(q1.value) +
-        Number(q2.value) +
-        Number(q3.value);
 
-      let result = "";
-
-      if(score <= 5){
-        result = "✅ Je mentale balans ziet er goed uit!";
-      }
-      else if(score <= 8){
-        result = "⚠️ Je ervaart licht verhoogde stress.";
-      }
-      else{
-        result = "🚨 Je ervaart veel stress. Praat met iemand die je vertrouwt.";
-      }
-
-      document.getElementById("result").innerHTML = result;
+    function showPage(id){
+        document.querySelectorAll('.page')
+          .forEach(p => p.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
     }
+
+    /* FAQ open/dicht */
+    function toggleFaq(el){
+        const answer = el.querySelector('.faq-answer');
+
+        if(answer.style.display === "block"){
+            answer.style.display = "none";
+        } else {
+            answer.style.display = "block";
+        }
+    }
+
+    /* Login demo */
+    function login(){
+        const user = document.getElementById("user").value;
+        const pass = document.getElementById("pass").value;
+
+        if(user === "admin" && pass === "1234"){
+            alert("Login successful");
+            showPage('home');
+        } else {
+            document.getElementById("error").innerText = "Incorrect login";
+        }
+    }
+
 </script>
 
 </body>
