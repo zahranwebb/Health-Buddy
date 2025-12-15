@@ -26,7 +26,7 @@
 
         .admin-link{
           position:absolute;top:10px;right:14px;
-          font-size:.8rem;opacity:.6;cursor:pointer;user-select:none
+          font-size:.8rem;opacity:.65;cursor:pointer;user-select:none
         }
 
         .screen{display:none}
@@ -43,14 +43,15 @@
           font-weight:700;margin:10px 0;cursor:pointer
         }
         .btn-green{background:#79d873}
-        .btn-dark{background:#0e4c55;color:#fff}
         .btn-mint{background:#8ee7c4}
         .btn-red{background:#ff7f7f}
+        .btn-dark{background:#0e4c55;color:#fff}
 
         .camera-box{
           width:100%;height:220px;background:#ccc;
           border-radius:12px;overflow:hidden;margin-bottom:16px;
           display:flex;align-items:center;justify-content:center;
+          position:relative;
         }
         .camera-box video{width:100%;height:100%;object-fit:cover}
         .camera-fallback{padding:14px;text-align:center;font-weight:700;opacity:.75}
@@ -70,7 +71,50 @@
           background:#fff;border-radius:16px;padding:12px;margin-top:10px;
           font-weight:700;display:none;text-align:left
         }
-        ul{padding-left:20px}
+
+        .panel{
+          background:#fff;border-radius:18px;padding:14px;margin-bottom:12px;
+        }
+        .panel p{margin:6px 0}
+        .row{display:flex;gap:10px}
+        .row > *{flex:1}
+        .list{
+          list-style:none;padding-left:0;margin-top:8px
+        }
+        .list li{
+          padding:10px 10px;
+          border-bottom:1px solid #eee;
+          font-weight:600;
+          font-size:.95rem;
+          word-break:break-word;
+        }
+        .tag{
+          display:inline-block;
+          padding:2px 10px;
+          border-radius:999px;
+          background:#f2f2f2;
+          margin-right:8px;
+          font-weight:800;
+          font-size:.85rem;
+        }
+        .warn{
+          background:#fff;
+          border:2px dashed #0e4c55;
+          border-radius:18px;
+          padding:12px;
+          margin-bottom:12px;
+          font-weight:700;
+        }
+        canvas{width:100%;height:220px;border-radius:12px;background:#fafafa}
+        select{
+          width:100%;
+          padding:12px 14px;
+          border-radius:26px;
+          border:2px solid #eee;
+          font-size:1rem;
+          font-weight:700;
+          background:#fff;
+        }
     </style>
 </head>
 
@@ -91,10 +135,18 @@
             <p>Scan a HealthBuddy pole to continue</p>
         </div>
         <button class="btn btn-green" onclick="showScreen('scan')">Scan pole</button>
+        <p class="small">This prototype writes scan/mood events to Firebase (cloud).</p>
     </section>
 
-    <!-- SCAN POLE -->
+    <!-- SCAN -->
     <section id="scan" class="screen">
+        <div class="card">
+            <h2>Scan pole</h2>
+            <p>Fill the Pole ID (for testing “per paal”)</p>
+        </div>
+
+        <input id="poleIdInput" class="input" placeholder="Pole ID (e.g. PAAL-1)" />
+
         <div class="camera-box">
             <video id="camera" autoplay playsinline></video>
             <div id="cameraFallback" class="camera-fallback" style="display:none;">
@@ -102,11 +154,10 @@
             </div>
         </div>
 
-        <!-- Simuleert "paal gescand" + telt scan voor admin -->
         <button class="btn btn-green" onclick="registerScan()">Pole scanned</button>
         <button class="btn btn-mint" onclick="showScreen('home')">Back</button>
 
-        <p class="small">Camera starts on this screen. The button simulates a successful scan.</p>
+        <p class="small">Camera starts on this screen. Button simulates a successful pole scan.</p>
     </section>
 
     <!-- MOOD -->
@@ -126,7 +177,7 @@
         <button class="btn btn-mint" onclick="showScreen('scan')">Back</button>
     </section>
 
-    <!-- TIPS (DYNAMIC) -->
+    <!-- TIPS -->
     <section id="tips" class="screen">
         <div id="tipsCard" class="card">
             <h2 id="tipsTitle"></h2>
@@ -144,68 +195,140 @@
         <button class="btn btn-mint" onclick="showScreen('mood')">Back</button>
     </section>
 
-    <!-- ADMIN SETUP (ONE TIME) -->
-    <section id="admin-setup" class="screen">
-        <div class="card">
-            <h2>Admin setup</h2>
-            <p>Set your admin code (one time)</p>
-        </div>
-
-        <input id="setupCode" class="input" placeholder="New admin code" />
-        <button class="btn btn-dark" onclick="saveAdminCode()">Save code</button>
-        <button class="btn btn-mint" onclick="showScreen('home')">Back</button>
-
-        <p id="setupError" class="small" style="display:none;color:#b00020;font-weight:700;"></p>
-    </section>
-
-    <!-- ADMIN LOGIN -->
+    <!-- ADMIN LOGIN (FIREBASE AUTH) -->
     <section id="admin-login" class="screen">
         <div class="card">
             <h2>Admin login</h2>
-            <p>Enter admin code</p>
+            <p>Login with your Firebase admin email + password</p>
         </div>
 
-        <input id="loginCode" class="input" placeholder="Admin code" />
+        <div class="warn">
+            Vul eerst jouw Firebase config in (in de code). Zet daarna Firebase Authentication (Email/Password) aan en maak een admin gebruiker aan.
+        </div>
+
+        <input id="adminEmail" class="input" placeholder="Admin email">
+        <input id="adminPassword" class="input" type="password" placeholder="Admin password">
+
         <button class="btn btn-dark" onclick="adminLogin()">Login</button>
         <button class="btn btn-mint" onclick="showScreen('home')">Back</button>
 
-        <p id="loginError" class="small" style="display:none;color:#b00020;font-weight:700;"></p>
+        <p id="adminError" class="small" style="display:none;color:#b00020;font-weight:800;"></p>
     </section>
 
     <!-- ADMIN PANEL -->
     <section id="admin-panel" class="screen">
         <div class="card">
             <h2>Admin panel</h2>
-            <p>Usage overview (stored locally in this browser)</p>
+            <p>Grafieken + per paal</p>
         </div>
 
-        <div class="card" style="background:#fff;">
-            <p><strong>Total scans:</strong> <span id="adminScans">0</span></p>
-            <p><strong>Great:</strong> <span id="adminGood">0</span></p>
-            <p><strong>Could be better:</strong> <span id="adminOk">0</span></p>
-            <p><strong>Sad:</strong> <span id="adminSad">0</span></p>
-            <p><strong>Very sad:</strong> <span id="adminVerySad">0</span></p>
+        <div class="panel">
+            <p><strong>Status:</strong> <span id="adminStatus">Connecting…</span></p>
+            <p><strong>Loaded events:</strong> <span id="loadedCount">0</span></p>
         </div>
 
-        <div class="card" style="background:#fff;">
-            <h3 style="text-align:left;margin-bottom:8px;">Last interactions</h3>
-            <ul id="adminHistory"></ul>
+        <div class="panel">
+            <p style="margin-bottom:10px;"><strong>Filter per paal</strong></p>
+            <select id="poleSelect"></select>
+            <p class="small">Selecteer “All poles” of een specifieke paal.</p>
         </div>
 
-        <button class="btn btn-red" onclick="resetAdminData()">Reset admin data</button>
-        <button class="btn btn-dark" onclick="adminLogout()">Logout</button>
+        <div class="panel">
+            <p><strong>Mood grafiek (4)</strong></p>
+            <canvas id="moodChart" width="900" height="450"></canvas>
+            <div class="row" style="margin-top:10px;">
+                <div class="panel" style="margin:0;">
+                    <p><strong>Great:</strong> <span id="statGood">0</span></p>
+                    <p><strong>Could be better:</strong> <span id="statOk">0</span></p>
+                </div>
+                <div class="panel" style="margin:0;">
+                    <p><strong>Sad:</strong> <span id="statSad">0</span></p>
+                    <p><strong>Very sad:</strong> <span id="statVerySad">0</span></p>
+                </div>
+            </div>
+        </div>
 
-        <p class="small">To change the admin code: clear site data in your browser, or use the button below.</p>
-        <button class="btn btn-mint" onclick="resetAdminCode()">Reset admin code (danger)</button>
+        <div class="panel">
+            <p><strong>Scans per paal</strong></p>
+            <canvas id="scanChart" width="900" height="450"></canvas>
+            <p class="small">Toont top palen op basis van aantal scans (van loaded events).</p>
+        </div>
+
+        <div class="panel">
+            <p><strong>Last events</strong></p>
+            <ul id="eventList" class="list"></ul>
+        </div>
+
+        <button class="btn btn-red" onclick="adminLogout()">Logout</button>
+        <button class="btn btn-mint" onclick="showScreen('home')">Back to Home</button>
     </section>
 
 </div>
 
-<script>
-    /* ===========================
-       CAMERA
-       =========================== */
+<!-- =========================
+     FIREBASE + APP SCRIPT
+     ========================= -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    // ====== VUL HIER JOUW FIREBASE CONFIG IN ======
+    const firebaseConfig = {
+      apiKey: "VUL_HIER_IN",
+      authDomain: "VUL_HIER_IN",
+      projectId: "VUL_HIER_IN",
+      storageBucket: "VUL_HIER_IN",
+      messagingSenderId: "VUL_HIER_IN",
+      appId: "VUL_HIER_IN"
+    };
+
+    const configLooksUnset = Object.values(firebaseConfig).some(v => !v || String(v).includes("VUL_HIER_IN"));
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
     let stream = null;
+    let selectedMood = null;
+    let timerInt = null;
+    let lastPoleId = "PAAL-1";
+
+    let stopAdminLive = null;
+    let cachedEvents = [];
+
+    // Expose functions to HTML
+    window.showScreen = showScreen;
+    window.registerScan = registerScan;
+    window.selectMood = selectMood;
+    window.goAdmin = goAdmin;
+    window.adminLogin = adminLogin;
+    window.adminLogout = adminLogout;
+    window.sharePositive = sharePositive;
+    window.saveGoal = saveGoal;
+    window.start5MinTimer = start5MinTimer;
+    window.sendMessage = sendMessage;
+    window.call113 = call113;
+    window.open113 = open113;
+
+    // Default pole ID for testing
+    document.getElementById("poleIdInput").value = lastPoleId;
+
+    function showScreen(id) {
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+      const target = document.getElementById(id);
+      if (target) target.classList.add("active");
+
+      if (id === "scan") startCamera();
+      else stopCamera();
+
+      if (id === "tips") renderTips();
+
+      if (id === "admin-panel") {
+        if (!auth.currentUser) { showScreen("admin-login"); return; }
+        startAdminLive();
+      }
+    }
 
     async function startCamera() {
       const video = document.getElementById("camera");
@@ -216,7 +339,6 @@
 
       try {
         if (stream) { video.srcObject = stream; return; }
-
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
           video.style.display = "none";
           fallback.style.display = "block";
@@ -247,174 +369,41 @@
       }
     }
 
-    /* ===========================
-       NAVIGATION
-       =========================== */
-    function showScreen(id) {
-      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
-      const target = document.getElementById(id);
-      if (target) target.classList.add("active");
-
-      // camera lifecycle
-      if (id === "scan") startCamera();
-      else stopCamera();
-
-      // render screens
-      if (id === "tips") renderTips();
-
-      if (id === "admin-panel") {
-        if (!isAdminLoggedIn()) { showScreen("admin-login"); return; }
-        renderAdminPanel();
-      }
-    }
-
-    /* ===========================
-       ADMIN: SETUP + LOGIN (CODE)
-       =========================== */
-    const ADMIN_HASH_KEY = "healthbuddy_admin_hash";
-    const ADMIN_SESSION_KEY = "healthbuddy_admin_session";
-
-    function isAdminLoggedIn() {
-      return localStorage.getItem(ADMIN_SESSION_KEY) === "true";
-    }
-
-    function goAdmin() {
-      if (!localStorage.getItem(ADMIN_HASH_KEY)) {
-        showScreen("admin-setup");
-      } else if (isAdminLoggedIn()) {
-        showScreen("admin-panel");
-      } else {
-        showScreen("admin-login");
-      }
-    }
-
-    async function sha256(text) {
-      const enc = new TextEncoder().encode(text);
-      const buf = await crypto.subtle.digest("SHA-256", enc);
-      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
-    }
-
-    async function saveAdminCode() {
-      const code = (document.getElementById("setupCode").value || "").trim();
-      const err = document.getElementById("setupError");
-      err.style.display = "none";
-
-      if (code.length < 3) {
-        err.textContent = "Code too short (min 3 characters).";
-        err.style.display = "block";
+    async function saveEventToCloud(type, payload = {}) {
+      if (configLooksUnset) {
+        alert("Firebase config is not filled in yet. Fill firebaseConfig first.");
         return;
       }
-
-      const hashed = await sha256(code);
-      localStorage.setItem(ADMIN_HASH_KEY, hashed);
-      document.getElementById("setupCode").value = "";
-      alert("Admin code saved.");
-      showScreen("admin-login");
+      await addDoc(collection(db, "healthbuddy_events"), {
+        type,                 // "scan" | "mood"
+        ...payload,           // { poleId, mood }
+        createdAt: serverTimestamp()
+      });
     }
 
-    async function adminLogin() {
-      const code = (document.getElementById("loginCode").value || "").trim();
-      const savedHash = localStorage.getItem(ADMIN_HASH_KEY);
-      const err = document.getElementById("loginError");
-      err.style.display = "none";
+    async function registerScan() {
+      const poleId = (document.getElementById("poleIdInput").value || "").trim() || "UNKNOWN";
+      lastPoleId = poleId;
 
-      if (!savedHash) {
-        showScreen("admin-setup");
-        return;
-      }
-
-      const inputHash = await sha256(code);
-
-      if (inputHash === savedHash) {
-        localStorage.setItem(ADMIN_SESSION_KEY, "true");
-        document.getElementById("loginCode").value = "";
-        showScreen("admin-panel");
-      } else {
-        err.textContent = "Wrong code.";
-        err.style.display = "block";
-      }
-    }
-
-    function adminLogout() {
-      localStorage.removeItem(ADMIN_SESSION_KEY);
-      showScreen("home");
-    }
-
-    function resetAdminCode() {
-      // Dangerous by design: removes code + session
-      localStorage.removeItem(ADMIN_HASH_KEY);
-      localStorage.removeItem(ADMIN_SESSION_KEY);
-      alert("Admin code removed. You must set a new code.");
-      showScreen("admin-setup");
-    }
-
-    /* ===========================
-       ADMIN STATS
-       =========================== */
-    const ADMIN_DATA_KEY = "healthbuddy_admin_data";
-
-    function getAdminData() {
       try {
-        return JSON.parse(localStorage.getItem(ADMIN_DATA_KEY)) || {
-          scans: 0,
-          moods: { good: 0, ok: 0, sad: 0, "very-sad": 0 },
-          history: []
-        };
-      } catch {
-        return { scans: 0, moods: { good: 0, ok: 0, sad: 0, "very-sad": 0 }, history: [] };
+        await saveEventToCloud("scan", { poleId });
+      } catch (e) {
+        console.error(e);
+        alert("Could not write scan to cloud (check Firebase config / rules).");
       }
-    }
-
-    function saveAdminData(data) {
-      localStorage.setItem(ADMIN_DATA_KEY, JSON.stringify(data));
-    }
-
-    function resetAdminData() {
-      localStorage.removeItem(ADMIN_DATA_KEY);
-      alert("Admin data reset.");
-      renderAdminPanel();
-    }
-
-    function registerScan() {
-      const data = getAdminData();
-      data.scans++;
-      data.history.unshift({ type: "scan", time: new Date().toLocaleString() });
-      data.history = data.history.slice(0, 10);
-      saveAdminData(data);
-
       showScreen("mood");
     }
 
-    function renderAdminPanel() {
-      const d = getAdminData();
-      document.getElementById("adminScans").textContent = d.scans;
-      document.getElementById("adminGood").textContent = d.moods.good;
-      document.getElementById("adminOk").textContent = d.moods.ok;
-      document.getElementById("adminSad").textContent = d.moods.sad;
-      document.getElementById("adminVerySad").textContent = d.moods["very-sad"];
-
-      const list = document.getElementById("adminHistory");
-      list.innerHTML = (d.history || []).map(h => {
-        if (h.type === "scan") return `<li>${h.time} — scan</li>`;
-        return `<li>${h.time} — mood: ${h.mood}</li>`;
-      }).join("");
-    }
-
-    /* ===========================
-       MOOD + DYNAMIC TIPS
-       =========================== */
-    let selectedMood = null;
-    let timerInt = null;
-
-    function selectMood(mood) {
+    async function selectMood(mood) {
       selectedMood = mood;
+      const poleId = lastPoleId || "UNKNOWN";
 
-      const data = getAdminData();
-      if (data.moods[mood] !== undefined) data.moods[mood]++;
-      data.history.unshift({ type: "mood", mood, time: new Date().toLocaleString() });
-      data.history = data.history.slice(0, 10);
-      saveAdminData(data);
-
+      try {
+        await saveEventToCloud("mood", { poleId, mood });
+      } catch (e) {
+        console.error(e);
+        alert("Could not write mood to cloud (check Firebase config / rules).");
+      }
       showScreen("tips");
     }
 
@@ -434,7 +423,6 @@
         tipsCard.style.background = "#79d873";
         tipsTitle.textContent = "Nice to hear you feel great";
         tipsSubtitle.textContent = "Keep the momentum going";
-
         tipsContent.innerHTML = `
           <input id="positiveText" class="input" placeholder="Write something positive to share">
           <button class="btn btn-green" onclick="sharePositive()">Share something positive</button>
@@ -448,7 +436,6 @@
         tipsCard.style.background = "#8ee7c4";
         tipsTitle.textContent = "Could be better";
         tipsSubtitle.textContent = "Try a small step";
-
         tipsContent.innerHTML = `
           <div id="timer">05:00</div>
           <button class="btn btn-green" onclick="start5MinTimer()">Start 5 minute break</button>
@@ -460,7 +447,6 @@
         tipsTitle.textContent = "It’s sad to hear you feel this way";
         tipsSubtitle.textContent = "You don’t have to do it alone";
         safety.style.display = "block";
-
         tipsContent.innerHTML = `
           <button class="btn btn-green" onclick="sendMessage('Hey, I’m feeling a bit down. Can we talk?')">Message someone you trust</button>
           <button class="btn btn-green" onclick="open113()">Open 113.nl</button>
@@ -471,7 +457,6 @@
         tipsTitle.textContent = "It’s really tough to feel this way";
         tipsSubtitle.textContent = "Please reach out for support right now";
         safety.style.display = "block";
-
         tipsContent.innerHTML = `
           <button class="btn btn-red" onclick="call113()">Call 113 now</button>
           <button class="btn btn-green" onclick="open113()">Open 113.nl</button>
@@ -485,23 +470,15 @@
       if (!text) return alert("Please write something positive first.");
 
       try {
-        if (navigator.share) {
-          await navigator.share({ text });
-        } else if (navigator.clipboard) {
-          await navigator.clipboard.writeText(text);
-          alert("Copied to clipboard. Paste it anywhere to share.");
-        } else {
-          alert("Sharing not supported in this browser.");
-        }
-      } catch {
-        // user cancelled share -> ignore
-      }
+        if (navigator.share) await navigator.share({ text });
+        else if (navigator.clipboard) { await navigator.clipboard.writeText(text); alert("Copied to clipboard."); }
+        else alert("Sharing not supported in this browser.");
+      } catch {}
     }
 
     function saveGoal() {
       const goal = (document.getElementById("goalInput").value || "").trim();
       if (!goal) return alert("Please enter a small goal.");
-
       const box = document.getElementById("savedGoal");
       box.textContent = "Your goal: " + goal;
       box.style.display = "block";
@@ -510,7 +487,6 @@
     function start5MinTimer() {
       let seconds = 300;
       clearInterval(timerInt);
-
       const timerEl = document.getElementById("timer");
       if (!timerEl) return;
 
@@ -518,13 +494,7 @@
         const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
         const ss = String(seconds % 60).padStart(2, "0");
         timerEl.textContent = `${mm}:${ss}`;
-
-        if (seconds <= 0) {
-          clearInterval(timerInt);
-          timerInt = null;
-          alert("Your 5 minute break is over.");
-          return;
-        }
+        if (seconds <= 0) { clearInterval(timerInt); timerInt = null; alert("Your 5 minute break is over."); return; }
         seconds--;
       }, 1000);
     }
@@ -533,13 +503,226 @@
       const msg = encodeURIComponent(text || "Hey, can we talk for a minute?");
       window.location.href = `sms:?body=${msg}`;
     }
+    function call113(){ window.location.href = "tel:113"; }
+    function open113(){ window.open("https://www.113.nl", "_blank", "noopener"); }
 
-    function call113() {
-      window.location.href = "tel:113";
+    // ===== Admin =====
+    function goAdmin(){ showScreen("admin-login"); }
+
+    async function adminLogin() {
+      const err = document.getElementById("adminError");
+      err.style.display = "none";
+
+      if (configLooksUnset) {
+        err.textContent = "Firebase config is not filled in yet.";
+        err.style.display = "block";
+        return;
+      }
+
+      const email = (document.getElementById("adminEmail").value || "").trim();
+      const pass  = (document.getElementById("adminPassword").value || "");
+      if (!email || !pass) {
+        err.textContent = "Fill in email and password.";
+        err.style.display = "block";
+        return;
+      }
+
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        showScreen("admin-panel");
+      } catch (e) {
+        console.error(e);
+        err.textContent = "Login failed. Check email/password and Firebase Auth settings.";
+        err.style.display = "block";
+      }
     }
 
-    function open113() {
-      window.open("https://www.113.nl", "_blank", "noopener");
+    async function adminLogout() {
+      if (stopAdminLive) { stopAdminLive(); stopAdminLive = null; }
+      await signOut(auth);
+      showScreen("home");
+    }
+
+    onAuthStateChanged(auth, (user) => {
+      const status = document.getElementById("adminStatus");
+      if (!status) return;
+      status.textContent = user ? "Logged in" : "Not logged in";
+    });
+
+    function startAdminLive() {
+      const status = document.getElementById("adminStatus");
+      if (!auth.currentUser) { status.textContent = "Not logged in"; return; }
+
+      status.textContent = "Live";
+      if (stopAdminLive) stopAdminLive();
+
+      const q = query(collection(db, "healthbuddy_events"), orderBy("createdAt", "desc"), limit(2000));
+
+      stopAdminLive = onSnapshot(q, (snap) => {
+        cachedEvents = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        document.getElementById("loadedCount").textContent = String(cachedEvents.length);
+
+        buildPoleDropdown(cachedEvents);
+        renderAdminFromFilter();
+        renderEventList(cachedEvents);
+      }, (err) => {
+        console.error(err);
+        status.textContent = "Error (check Firestore rules)";
+      });
+    }
+
+    function buildPoleDropdown(items) {
+      const select = document.getElementById("poleSelect");
+      const current = select.value || "ALL";
+
+      const poles = new Set();
+      for (const it of items) {
+        if (it.poleId) poles.add(it.poleId);
+      }
+      const sorted = Array.from(poles).sort((a,b)=>a.localeCompare(b));
+
+      select.innerHTML = "";
+      const optAll = document.createElement("option");
+      optAll.value = "ALL";
+      optAll.textContent = "All poles";
+      select.appendChild(optAll);
+
+      for (const p of sorted) {
+        const opt = document.createElement("option");
+        opt.value = p;
+        opt.textContent = p;
+        select.appendChild(opt);
+      }
+
+      select.value = (sorted.includes(current) || current === "ALL") ? current : "ALL";
+
+      select.onchange = () => renderAdminFromFilter();
+    }
+
+    function renderAdminFromFilter() {
+      const filter = document.getElementById("poleSelect").value || "ALL";
+      const filtered = (filter === "ALL")
+        ? cachedEvents
+        : cachedEvents.filter(e => e.poleId === filter);
+
+      const moodCounts = { good:0, ok:0, sad:0, "very-sad":0 };
+      const scansPerPole = new Map();
+
+      for (const it of cachedEvents) {
+        const pid = it.poleId || "UNKNOWN";
+        if (!scansPerPole.has(pid)) scansPerPole.set(pid, 0);
+        if (it.type === "scan") scansPerPole.set(pid, scansPerPole.get(pid) + 1);
+      }
+
+      for (const it of filtered) {
+        if (it.type === "mood" && it.mood && moodCounts[it.mood] !== undefined) {
+          moodCounts[it.mood]++;
+        }
+      }
+
+      document.getElementById("statGood").textContent = String(moodCounts.good);
+      document.getElementById("statOk").textContent = String(moodCounts.ok);
+      document.getElementById("statSad").textContent = String(moodCounts.sad);
+      document.getElementById("statVerySad").textContent = String(moodCounts["very-sad"]);
+
+      drawBarChart(
+        document.getElementById("moodChart"),
+        ["Great","Could be better","Sad","Very sad"],
+        [moodCounts.good, moodCounts.ok, moodCounts.sad, moodCounts["very-sad"]],
+        "Moods"
+      );
+
+      // top scans per pole (overall, not filtered)
+      const top = Array.from(scansPerPole.entries())
+        .sort((a,b)=>b[1]-a[1])
+        .slice(0, 10);
+
+      drawBarChart(
+        document.getElementById("scanChart"),
+        top.map(x=>x[0]),
+        top.map(x=>x[1]),
+        "Scans"
+      );
+    }
+
+    function renderEventList(items) {
+      const ul = document.getElementById("eventList");
+      ul.innerHTML = items.slice(0, 30).map(it => {
+        const type = it.type || "event";
+        const pole = it.poleId ? ` pole=${it.poleId}` : "";
+        const mood = it.mood ? ` mood=${it.mood}` : "";
+        return `<li><span class="tag">${type}</span>${pole}${mood}</li>`;
+      }).join("");
+    }
+
+    // Simple canvas bar chart (no libraries)
+    function drawBarChart(canvas, labels, values, yLabel) {
+      const ctx = canvas.getContext("2d");
+      const w = canvas.width, h = canvas.height;
+      ctx.clearRect(0,0,w,h);
+
+      const padding = 60;
+      const maxVal = Math.max(1, ...values);
+      const chartW = w - padding*2;
+      const chartH = h - padding*2;
+      const barCount = labels.length;
+      const gap = Math.max(10, Math.floor(chartW * 0.03));
+      const barW = Math.max(18, Math.floor((chartW - gap*(barCount-1)) / barCount));
+
+      // axes
+      ctx.fillStyle = "#0e4c55";
+      ctx.font = "20px 'Baloo 2'";
+      ctx.fillText(yLabel, 12, 32);
+
+      ctx.strokeStyle = "#d6d6d6";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(padding, h - padding);
+      ctx.lineTo(w - padding, h - padding);
+      ctx.moveTo(padding, h - padding);
+      ctx.lineTo(padding, padding);
+      ctx.stroke();
+
+      // ticks
+      ctx.fillStyle = "#666";
+      ctx.font = "18px 'Baloo 2'";
+      const ticks = 4;
+      for (let i=0;i<=ticks;i++){
+        const v = Math.round((maxVal * i)/ticks);
+        const y = h - padding - (chartH * i)/ticks;
+        ctx.strokeStyle = "#eeeeee";
+        ctx.beginPath();
+        ctx.moveTo(padding, y);
+        ctx.lineTo(w - padding, y);
+        ctx.stroke();
+        ctx.fillText(String(v), 18, y+6);
+      }
+
+      // bars
+      for (let i=0;i<barCount;i++){
+        const x = padding + i*(barW+gap);
+        const barH = (values[i] / maxVal) * chartH;
+        const y = h - padding - barH;
+
+        ctx.fillStyle = "#0e4c55";
+        ctx.fillRect(x, y, barW, barH);
+
+        // value
+        ctx.fillStyle = "#0e4c55";
+        ctx.font = "20px 'Baloo 2'";
+        ctx.fillText(String(values[i]), x + 6, y - 8);
+
+        // label
+        ctx.fillStyle = "#333";
+        ctx.font = "18px 'Baloo 2'";
+        const label = labels[i];
+        // small wrap
+        const maxChars = 10;
+        const line1 = label.length > maxChars ? label.slice(0, maxChars) : label;
+        const line2 = label.length > maxChars ? label.slice(maxChars) : "";
+        ctx.fillText(line1, x, h - padding + 22);
+        if (line2) ctx.fillText(line2, x, h - padding + 44);
+      }
     }
 </script>
 </body>
