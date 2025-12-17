@@ -135,7 +135,7 @@
             <p>Scan a HealthBuddy pole to continue</p>
         </div>
         <button class="btn btn-green" onclick="showScreen('scan')">Scan pole</button>
-        <p class="small">This prototype writes scan/mood events to Firebase (cloud).</p>
+        <p class="small">This prototype stores scan/mood events locally (localStorage).</p>
     </section>
 
     <!-- SCAN -->
@@ -195,21 +195,22 @@
         <button class="btn btn-mint" onclick="showScreen('mood')">Back</button>
     </section>
 
-    <!-- ADMIN LOGIN (FIREBASE AUTH) -->
+    <!-- ADMIN LOGIN (LOCAL - CREATE + LOGIN) -->
     <section id="admin-login" class="screen">
         <div class="card">
             <h2>Admin login</h2>
-            <p>Login with your Firebase admin email + password</p>
+            <p>Maak een admin aan (email + wachtwoord) en log daarna in</p>
         </div>
 
-        <div class="warn">
-            Vul eerst jouw Firebase config in (in de code). Zet daarna Firebase Authentication (Email/Password) aan en maak een admin gebruiker aan.
+        <div class="warn" id="adminHint">
+            Geen admin gevonden. Vul een email + wachtwoord in en klik <strong>Create admin</strong>.
         </div>
 
-        <input id="adminEmail" class="input" placeholder="Admin email">
+        <input id="adminEmail" class="input" placeholder="Admin email (bijv. admin@gmail.com)">
         <input id="adminPassword" class="input" type="password" placeholder="Admin password">
 
         <button class="btn btn-dark" onclick="adminLogin()">Login</button>
+        <button class="btn btn-green" onclick="createAdmin()">Create admin</button>
         <button class="btn btn-mint" onclick="showScreen('home')">Back</button>
 
         <p id="adminError" class="small" style="display:none;color:#b00020;font-weight:800;"></p>
@@ -223,7 +224,7 @@
         </div>
 
         <div class="panel">
-            <p><strong>Status:</strong> <span id="adminStatus">Connecting…</span></p>
+            <p><strong>Status:</strong> <span id="adminStatus">Not logged in</span></p>
             <p><strong>Loaded events:</strong> <span id="loadedCount">0</span></p>
         </div>
 
@@ -265,44 +266,30 @@
 
 </div>
 
-<!-- =========================
-     FIREBASE + APP SCRIPT
-     ========================= -->
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, serverTimestamp, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-    // ====== VUL HIER JOUW FIREBASE CONFIG IN ======
-    const firebaseConfig = {
-      apiKey: "VUL_HIER_IN",
-      authDomain: "VUL_HIER_IN",
-      projectId: "VUL_HIER_IN",
-      storageBucket: "VUL_HIER_IN",
-      messagingSenderId: "VUL_HIER_IN",
-      appId: "VUL_HIER_IN"
-    };
-
-    const configLooksUnset = Object.values(firebaseConfig).some(v => !v || String(v).includes("VUL_HIER_IN"));
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
+<script>
+    // =========================
+    // LOCAL STORAGE KEYS
+    // =========================
+    const EVENTS_KEY = "healthbuddy_events_local_v1";
+    const ADMIN_EMAIL_KEY = "healthbuddy_admin_email_v1";
+    const ADMIN_PASS_KEY  = "healthbuddy_admin_pass_v1";
 
     let stream = null;
     let selectedMood = null;
     let timerInt = null;
     let lastPoleId = "PAAL-1";
 
-    let stopAdminLive = null;
+    let localAdminLoggedIn = false;
     let cachedEvents = [];
+    let adminRefreshInt = null;
 
-    // Expose functions to HTML
+    // Expose functions
     window.showScreen = showScreen;
     window.registerScan = registerScan;
     window.selectMood = selectMood;
     window.goAdmin = goAdmin;
     window.adminLogin = adminLogin;
+    window.createAdmin = createAdmin;
     window.adminLogout = adminLogout;
     window.sharePositive = sharePositive;
     window.saveGoal = saveGoal;
@@ -311,8 +298,8 @@
     window.call113 = call113;
     window.open113 = open113;
 
-    // Default pole ID for testing
     document.getElementById("poleIdInput").value = lastPoleId;
+    updateAdminHint();
 
     function showScreen(id) {
       document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
@@ -325,9 +312,13 @@
       if (id === "tips") renderTips();
 
       if (id === "admin-panel") {
-        if (!auth.currentUser) { showScreen("admin-login"); return; }
+        if (!localAdminLoggedIn) { showScreen("admin-login"); return; }
         startAdminLive();
+      } else {
+        stopAdminLive();
       }
+
+      if (id === "admin-login") updateAdminHint();
     }
 
     async function startCamera() {
@@ -369,41 +360,40 @@
       }
     }
 
-    async function saveEventToCloud(type, payload = {}) {
-      if (configLooksUnset) {
-        alert("Firebase config is not filled in yet. Fill firebaseConfig first.");
-        return;
+    // =========================
+    // LOCAL EVENTS
+    // =========================
+    function loadLocalEvents() {
+      try {
+        const raw = localStorage.getItem(EVENTS_KEY);
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr : [];
+      } catch {
+        return [];
       }
-      await addDoc(collection(db, "healthbuddy_events"), {
-        type,                 // "scan" | "mood"
-        ...payload,           // { poleId, mood }
-        createdAt: serverTimestamp()
-      });
+    }
+
+    function saveLocalEvents(arr) {
+      localStorage.setItem(EVENTS_KEY, JSON.stringify(arr));
+    }
+
+    async function saveEvent(type, payload = {}) {
+      const arr = loadLocalEvents();
+      arr.unshift({ type, ...payload, createdAt: Date.now() });
+      saveLocalEvents(arr);
     }
 
     async function registerScan() {
       const poleId = (document.getElementById("poleIdInput").value || "").trim() || "UNKNOWN";
       lastPoleId = poleId;
-
-      try {
-        await saveEventToCloud("scan", { poleId });
-      } catch (e) {
-        console.error(e);
-        alert("Could not write scan to cloud (check Firebase config / rules).");
-      }
+      await saveEvent("scan", { poleId });
       showScreen("mood");
     }
 
     async function selectMood(mood) {
       selectedMood = mood;
       const poleId = lastPoleId || "UNKNOWN";
-
-      try {
-        await saveEventToCloud("mood", { poleId, mood });
-      } catch (e) {
-        console.error(e);
-        alert("Could not write mood to cloud (check Firebase config / rules).");
-      }
+      await saveEvent("mood", { poleId, mood });
       showScreen("tips");
     }
 
@@ -506,69 +496,108 @@
     function call113(){ window.location.href = "tel:113"; }
     function open113(){ window.open("https://www.113.nl", "_blank", "noopener"); }
 
-    // ===== Admin =====
+    // =========================
+    // LOCAL ADMIN: CREATE + LOGIN
+    // =========================
     function goAdmin(){ showScreen("admin-login"); }
+
+    function updateAdminHint() {
+      const hint = document.getElementById("adminHint");
+      const savedEmail = localStorage.getItem(ADMIN_EMAIL_KEY);
+      const savedPass  = localStorage.getItem(ADMIN_PASS_KEY);
+
+      if (savedEmail && savedPass) {
+        hint.innerHTML = `Admin bestaat al (<strong>${escapeHtml(savedEmail)}</strong>). Log in of maak opnieuw (Create admin overschrijft).`;
+      } else {
+        hint.innerHTML = `Geen admin gevonden. Vul een email + wachtwoord in en klik <strong>Create admin</strong>.`;
+      }
+    }
+
+    function createAdmin() {
+      const err = document.getElementById("adminError");
+      err.style.display = "none";
+
+      const email = (document.getElementById("adminEmail").value || "").trim();
+      const pass  = (document.getElementById("adminPassword").value || "");
+
+      if (!email || !pass) {
+        err.textContent = "Vul email en wachtwoord in.";
+        err.style.display = "block";
+        return;
+      }
+
+      if (!email.includes("@") || email.length < 5) {
+        err.textContent = "Gebruik een geldig emailadres (bijv. naam@gmail.com).";
+        err.style.display = "block";
+        return;
+      }
+
+      if (pass.length < 4) {
+        err.textContent = "Wachtwoord te kort (minimaal 4 tekens).";
+        err.style.display = "block";
+        return;
+      }
+
+      localStorage.setItem(ADMIN_EMAIL_KEY, email);
+      localStorage.setItem(ADMIN_PASS_KEY, pass);
+
+      updateAdminHint();
+      alert("Admin aangemaakt. Je kunt nu inloggen.");
+    }
 
     async function adminLogin() {
       const err = document.getElementById("adminError");
       err.style.display = "none";
 
-      if (configLooksUnset) {
-        err.textContent = "Firebase config is not filled in yet.";
-        err.style.display = "block";
-        return;
-      }
-
       const email = (document.getElementById("adminEmail").value || "").trim();
       const pass  = (document.getElementById("adminPassword").value || "");
-      if (!email || !pass) {
-        err.textContent = "Fill in email and password.";
+
+      const savedEmail = localStorage.getItem(ADMIN_EMAIL_KEY);
+      const savedPass  = localStorage.getItem(ADMIN_PASS_KEY);
+
+      if (!savedEmail || !savedPass) {
+        err.textContent = "Er is nog geen admin aangemaakt. Klik eerst op Create admin.";
         err.style.display = "block";
         return;
       }
 
-      try {
-        await signInWithEmailAndPassword(auth, email, pass);
+      if (email === savedEmail && pass === savedPass) {
+        localAdminLoggedIn = true;
         showScreen("admin-panel");
-      } catch (e) {
-        console.error(e);
-        err.textContent = "Login failed. Check email/password and Firebase Auth settings.";
-        err.style.display = "block";
+        return;
       }
+
+      err.textContent = "Email of wachtwoord is fout.";
+      err.style.display = "block";
     }
 
     async function adminLogout() {
-      if (stopAdminLive) { stopAdminLive(); stopAdminLive = null; }
-      await signOut(auth);
+      localAdminLoggedIn = false;
+      stopAdminLive();
       showScreen("home");
     }
 
-    onAuthStateChanged(auth, (user) => {
-      const status = document.getElementById("adminStatus");
-      if (!status) return;
-      status.textContent = user ? "Logged in" : "Not logged in";
-    });
-
     function startAdminLive() {
-      const status = document.getElementById("adminStatus");
-      if (!auth.currentUser) { status.textContent = "Not logged in"; return; }
+      document.getElementById("adminStatus").textContent = localAdminLoggedIn ? "Logged in (local)" : "Not logged in";
+      renderAdminFromStorage();
+      if (adminRefreshInt) clearInterval(adminRefreshInt);
+      adminRefreshInt = setInterval(renderAdminFromStorage, 1000);
+    }
 
-      status.textContent = "Live";
-      if (stopAdminLive) stopAdminLive();
+    function stopAdminLive() {
+      if (adminRefreshInt) {
+        clearInterval(adminRefreshInt);
+        adminRefreshInt = null;
+      }
+    }
 
-      const q = query(collection(db, "healthbuddy_events"), orderBy("createdAt", "desc"), limit(2000));
+    function renderAdminFromStorage() {
+      cachedEvents = loadLocalEvents();
+      document.getElementById("loadedCount").textContent = String(cachedEvents.length);
 
-      stopAdminLive = onSnapshot(q, (snap) => {
-        cachedEvents = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        document.getElementById("loadedCount").textContent = String(cachedEvents.length);
-
-        buildPoleDropdown(cachedEvents);
-        renderAdminFromFilter();
-        renderEventList(cachedEvents);
-      }, (err) => {
-        console.error(err);
-        status.textContent = "Error (check Firestore rules)";
-      });
+      buildPoleDropdown(cachedEvents);
+      renderAdminFromFilter();
+      renderEventList(cachedEvents);
     }
 
     function buildPoleDropdown(items) {
@@ -576,9 +605,7 @@
       const current = select.value || "ALL";
 
       const poles = new Set();
-      for (const it of items) {
-        if (it.poleId) poles.add(it.poleId);
-      }
+      for (const it of items) if (it.poleId) poles.add(it.poleId);
       const sorted = Array.from(poles).sort((a,b)=>a.localeCompare(b));
 
       select.innerHTML = "";
@@ -595,15 +622,12 @@
       }
 
       select.value = (sorted.includes(current) || current === "ALL") ? current : "ALL";
-
       select.onchange = () => renderAdminFromFilter();
     }
 
     function renderAdminFromFilter() {
       const filter = document.getElementById("poleSelect").value || "ALL";
-      const filtered = (filter === "ALL")
-        ? cachedEvents
-        : cachedEvents.filter(e => e.poleId === filter);
+      const filtered = (filter === "ALL") ? cachedEvents : cachedEvents.filter(e => e.poleId === filter);
 
       const moodCounts = { good:0, ok:0, sad:0, "very-sad":0 };
       const scansPerPole = new Map();
@@ -632,10 +656,7 @@
         "Moods"
       );
 
-      // top scans per pole (overall, not filtered)
-      const top = Array.from(scansPerPole.entries())
-        .sort((a,b)=>b[1]-a[1])
-        .slice(0, 10);
+      const top = Array.from(scansPerPole.entries()).sort((a,b)=>b[1]-a[1]).slice(0, 10);
 
       drawBarChart(
         document.getElementById("scanChart"),
@@ -649,13 +670,12 @@
       const ul = document.getElementById("eventList");
       ul.innerHTML = items.slice(0, 30).map(it => {
         const type = it.type || "event";
-        const pole = it.poleId ? ` pole=${it.poleId}` : "";
-        const mood = it.mood ? ` mood=${it.mood}` : "";
-        return `<li><span class="tag">${type}</span>${pole}${mood}</li>`;
+        const pole = it.poleId ? ` pole=${escapeHtml(it.poleId)}` : "";
+        const mood = it.mood ? ` mood=${escapeHtml(it.mood)}` : "";
+        return `<li><span class="tag">${escapeHtml(type)}</span>${pole}${mood}</li>`;
       }).join("");
     }
 
-    // Simple canvas bar chart (no libraries)
     function drawBarChart(canvas, labels, values, yLabel) {
       const ctx = canvas.getContext("2d");
       const w = canvas.width, h = canvas.height;
@@ -669,7 +689,6 @@
       const gap = Math.max(10, Math.floor(chartW * 0.03));
       const barW = Math.max(18, Math.floor((chartW - gap*(barCount-1)) / barCount));
 
-      // axes
       ctx.fillStyle = "#0e4c55";
       ctx.font = "20px 'Baloo 2'";
       ctx.fillText(yLabel, 12, 32);
@@ -683,7 +702,6 @@
       ctx.lineTo(padding, padding);
       ctx.stroke();
 
-      // ticks
       ctx.fillStyle = "#666";
       ctx.font = "18px 'Baloo 2'";
       const ticks = 4;
@@ -698,7 +716,6 @@
         ctx.fillText(String(v), 18, y+6);
       }
 
-      // bars
       for (let i=0;i<barCount;i++){
         const x = padding + i*(barW+gap);
         const barH = (values[i] / maxVal) * chartH;
@@ -707,22 +724,25 @@
         ctx.fillStyle = "#0e4c55";
         ctx.fillRect(x, y, barW, barH);
 
-        // value
         ctx.fillStyle = "#0e4c55";
         ctx.font = "20px 'Baloo 2'";
         ctx.fillText(String(values[i]), x + 6, y - 8);
 
-        // label
         ctx.fillStyle = "#333";
         ctx.font = "18px 'Baloo 2'";
         const label = labels[i];
-        // small wrap
         const maxChars = 10;
         const line1 = label.length > maxChars ? label.slice(0, maxChars) : label;
         const line2 = label.length > maxChars ? label.slice(maxChars) : "";
         ctx.fillText(line1, x, h - padding + 22);
         if (line2) ctx.fillText(line2, x, h - padding + 44);
       }
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+      }[c]));
     }
 </script>
 </body>
